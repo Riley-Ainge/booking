@@ -1,0 +1,249 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+    @using Assignment2.Models;
+    @model IEnumerable<Centre>;
+}
+<div id="centretable">
+    <b>Admin Login</b>
+    <form>
+      <input type="text" id="Username" name="Username" placeholder="Username" />
+      <input type="text" id="Password" name="Password" placeholder="Password" />
+      
+    </form>
+    <button id="login" onclick="login()">Login</button>
+</div>
+<div>
+    <b>Centre Select</b>
+    <form></form>
+            <input type="text" id="Search" name="Search" placeholder="Search" />
+    <button id="search" onclick="searchCentre()">Search</button>
+    <form id="div2">
+    <select name="centre" id="centre" onChange="changeCentre()">
+        @foreach (var centre in Model)
+        {
+            <option value=@centre.Id.ToString()>@centre.Name</option>
+        }
+    </select>
+    </form>
+</div>
+<div id="div3">
+    <b>Make Booking</b>
+    <form>
+      <input type="text" id="BookingID" name="BookingID" placeholder="BookingID" />
+      <input type="text" id="Name" name="Name" placeholder="Name" />
+      <input type="text" id="StartTime" name="StartTime" placeholder="Start Time" />
+      <input type="text" id="EndTime" name="EndTime" placeholder="End Time" />
+    </form>
+    <button id="makeBooking" onclick="makeBooking()">Make Booking</button>
+    
+</div>
+<div id="div4">
+    <b id="CentreText" style = "visibility:hidden">Add Centre</b>
+    <form></form>
+    <input type="text" id="CentreID" name="CentreID" placeholder="CentreID" style = "visibility:hidden" />
+    <input type="text" id="CentreName" name="CentreName" placeholder="Name" style = "visibility:hidden" />
+    <button id="addCentre" onclick="addCentre()" style = "visibility:hidden">Add Centre</button>
+</div>
+<script>
+var isAdmin = false;
+function changeCentre() {
+    if (document.getElementById('BookingTable') != null) {
+        document.getElementById('BookingTable').remove();
+    }
+    var body = document.getElementById('div3');
+    var tbl = document.createElement('table');
+    tbl.style.width = '100%';
+    tbl.setAttribute('border', '1');
+    tbl.setAttribute('id', "BookingTable");
+    var tbdy = document.createElement('tbody');
+            $.ajax({
+            url: '/bookings/getallbookings/',
+            type: 'get',
+            contentType: 'application/json',
+            processData: false,
+            success: function (data, textStatus, jQxhr) 
+            {
+                var obj = JSON.parse(data);
+                var yourSelect = document.getElementById("centre");
+                if (isAdmin) {
+                    for (var i = 0; i < obj.length; i++) {
+                        if (obj[i].CentreID == yourSelect.options[yourSelect.selectedIndex].value) {
+                            var tr = document.createElement('tr');
+                            var td = document.createElement('td');
+                            td.appendChild(document.createTextNode(obj[i].Name));
+                            tr.appendChild(td)
+                            td = document.createElement('td');
+                            td.appendChild(document.createTextNode(obj[i].Start));
+                            tr.appendChild(td)
+                            td = document.createElement('td');
+                            td.appendChild(document.createTextNode(obj[i].End));
+                            tr.appendChild(td)
+
+                            tbdy.appendChild(tr);
+                        }
+                    }
+                    tbl.appendChild(tbdy);
+                    body.appendChild(tbl);
+                }
+                var hasEntry = "true";
+                var end = new Date(obj[0].End);
+                for (var i = 0; i < obj.length; i++) {  
+                    if (obj[i].CentreID == yourSelect.options[yourSelect.selectedIndex].value) {
+                        if (hasEntry == "true") {
+                            hasEntry = "false";
+                            end = new Date(obj[i].End);
+                        }
+                        else {
+                            var result = end;
+                            result.setDate(result.getDate() + 1);
+                            if (result < new Date(obj[i].Start)) {
+                                $("#StartTime").val(result.getDate()+"/"+(result.getMonth()-(-1))+"/"+result.getFullYear());
+                                return;
+                            }
+                        }
+                        
+                    }
+                }
+                if (hasEntry == "false") {
+                    var result = end;
+                    result.setDate(result.getDate() + 1);
+                    $("#StartTime").val(result.getDate()+"/"+(result.getMonth()-(-1))+"/"+result.getFullYear());
+                }
+                if (hasEntry == "true") {
+                    $("#StartTime").val(new Date().getDate()+"/"+(new Date().getMonth()-(-1))+"/"+new Date().getFullYear());
+                }
+
+                /*var hasEntry = "false";
+                var end = new Date(obj[0].End);
+                for (var i = 1; i < obj.length; i++) {
+                    if (obj[i].CentreID == yourSelect.options[yourSelect.selectedIndex].value[0]) {
+                        hasEntry = "true";
+                        var result = end;
+                        result.setDate(result.getDate() + 1);
+                        if (result < new Date(obj[i].Start)) {
+                            $("#StartTime").val(result);
+                            return;
+                        }
+                        end = new Date(obj[i].End);
+                    }
+                }
+                if (hasEntry == "false") {
+                    alert(Date.now().toString());
+                    $("#StartTime").val(Date.now().toString());
+                    return;
+                }
+                    var result = end;
+                    result.setDate(result.getDate() + 1);
+                    $("#StartTime").val(result);*/
+            },
+            error: function (jqXhr, textStatus, errorThrown) 
+            {
+                console.log(errorThrown);
+            } 
+        });
+}
+function searchCentre() {
+    if (document.getElementById('centre') != null) {
+        document.getElementById('centre').remove();
+    }
+        var body = document.getElementById('div2');
+        var select = document.createElement('select');
+        select.setAttribute('id', "centre");
+        select.setAttribute('onChange', 'changeCentre()');
+        $.ajax({
+            url: '/centres/search/'+ $('#Search').val(),
+            type: 'get',
+            contentType: 'application/json',
+            processData: false,
+            success: function (data, textStatus, jQxhr) 
+            {
+                var obj = JSON.parse(data);
+                for (var i = 0; i < obj.length; i++) {
+                    var option = document.createElement('option');
+                    option.setAttribute('value', obj[i].Id);
+                    option.appendChild(document.createTextNode(obj[i].Name));
+                    select.appendChild(option);
+                }
+                body.appendChild(select);
+                
+            },
+            error: function (jqXhr, textStatus, errorThrown) 
+            {
+                console.log(errorThrown);
+            } 
+        });
+}
+function addCentre() {
+    var yourSelect = document.getElementById("centre");
+        $.ajax({
+            type: 'POST',
+            url: '/Centres/Insert/',
+            contentType: 'application/json',
+            data: JSON.stringify(
+            {
+                "Id": $('#CentreID').val(),
+                "Name": $("#CentreName").val(),
+            }),
+            success: function(data, textStatus, jQxhr)
+            {
+                alert("Data Inserted");
+            },
+            error: function(xhr, textStatus, error)
+            {
+                alert("Error");
+                console.log(xhr.statusText);
+                console.log(textStatus);
+                console.log(error);
+            }
+        });
+    searchCentre();
+}
+function makeBooking() {
+    var yourSelect = document.getElementById("centre");
+    //alert(yourSelect.options[yourSelect.selectedIndex].value);
+    var [day, month, year] = $("#StartTime").val().split('/');
+    var [day2, month2, year2] = $("#EndTime").val().split('/');
+    if (yourSelect.options[yourSelect.selectedIndex].value != 0) {
+        $.ajax({
+            type: 'POST',
+            url: '/Bookings/Insert/',
+            contentType: 'application/json',
+            data: JSON.stringify(
+                {
+                    "Id": $('#BookingID').val(),
+                    "Name": $("#Name").val(),
+                    "Start": new Date(year, month - 1, day - (-1)),
+                    "End": new Date(year2, month2 - 1, day2 - (-1)),
+                    "CentreID": yourSelect.options[yourSelect.selectedIndex].value
+                }),
+            success: function(data, textStatus, jQxhr) {
+                alert("Data Inserted");
+            },
+            error: function(xhr, textStatus, error) {
+                alert("Error, Date already booked");
+                console.log(xhr.statusText);
+                console.log(textStatus);
+                console.log(error);
+            }
+        });
+    }
+    else {
+        alert("Please select a centre");
+    }
+}
+function login() {
+    if ($("#Username").val() == "admin" && $("#Password").val() == "adminpass") {
+        alert("Login Successful");
+        document.getElementById("CentreText").style.visibility = "visible";
+        document.getElementById("addCentre").style.visibility = "visible";
+        document.getElementById("CentreID").style.visibility = "visible";
+        document.getElementById("CentreName").style.visibility = "visible";
+        isAdmin = true;
+    }
+    else {
+        alert("Wrong Login");
+    }
+}
+</script>
